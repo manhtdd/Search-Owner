@@ -14,41 +14,24 @@ log_file_path = os.path.join(f'{os.getcwd()}/logs', f'{datetime.now().strftime("
 # Replace logging configuration with IceCream configuration
 logger.configureOutput(prefix=' - ', outputFunction=lambda x: open(log_file_path, 'a').write(x + '\n'))
 
-import requests
-import time
-
 def find_repo_by_name(repo_name, username, token):
-    repositories = []
-    page = 1
-    
-    while True:
-        # Construct the URL to search for repositories
-        url = f"https://api.github.com/search/repositories?q={repo_name}&page={page}"
+    # Construct the URL to search for repositories
+    url = f"https://api.github.com/search/repositories?q={repo_name}"
 
-        # Make the request with authentication
-        response = requests.get(url, auth=(username, token))
+    # Make the request with authentication
+    response = requests.get(url, auth=(username, token))
 
-        # Check if the request was successful
-        if response.status_code == 200:
-            # Parse the JSON response
-            result = response.json()
-            items = result.get('items', [])
-            
-            # Add the repositories to the list
-            repositories.extend(items)
-            
-            # Check if there are more pages
-            if 'next' in response.links:
-                page += 1
-                time.sleep(3)  # Add a delay to avoid hitting rate limits
-            else:
-                break
-        else:
-            # If the request was unsuccessful, print an error message
-            logger(f"{repo_name}-{response.status_code}")
-            return None
-
-    return repositories
+    # Check if the request was successful
+    if response.status_code == 200:
+        # Parse the JSON response
+        result = response.json()
+        items = result.get('items', [])
+        
+        return items
+    else:
+        # If the request was unsuccessful, print an error message
+        logger(f"{repo_name} {response.status_code}")
+        return None
 
 def generate_commit_link(repo_url, commit_hash):
     # Construct GitHub commit link
@@ -59,7 +42,7 @@ def generate_commit_link(repo_url, commit_hash):
     if response.status_code == 200:
         return commit_link
     else:
-        logger(f"{repo_url}-{commit_hash}-{response.status_code}")
+        logger(f"{commit_link} {response.status_code}")
         return None
 
 def save_to_file(commit_link):
@@ -86,7 +69,7 @@ def extract_commit_info(pattern):
                 commit_hash = commit_info['hash']
 
                 # Extract additional information from commit_info.json
-                commit_info_list.append({'language': language, 'repo': repo, 'commit_hash': commit_hash})
+                commit_info_list.append({'repo': repo, 'commit_hash': commit_hash})
             except Exception as e:
                 logger(f"Error loading or processing file {path}: {e}")
         else:
