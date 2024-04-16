@@ -2,6 +2,7 @@ import os, requests, re, glob, time
 from icecream import ic as logger
 from datetime import datetime
 from tqdm import tqdm
+import pandas as pd
 
 if not os.path.exists(f'{os.getcwd()}/logs'):
     os.makedirs(f'{os.getcwd()}/logs')
@@ -73,10 +74,13 @@ def extract_commit_info(pattern):
 
             try:
                 # Extract additional information from commit_info.json
-                version_info_list.append({'repo': project_name, 'version': version})
+                version_info_list.append({'found': False, 'repo': project_name, 'version': version, 'cve': cve, 'file_name': file_name})
             except Exception as e:
                 logger(f"Error loading or processing file {path}: {e}")
         else:
             logger("Pattern does not match expected format.")
 
-    return version_info_list
+    # Convert version_info_list to DataFrame
+    df = pd.DataFrame(version_info_list)
+    df.to_csv('outputs/commit_info.csv', index=False)
+    return df

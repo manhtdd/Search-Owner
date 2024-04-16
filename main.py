@@ -1,6 +1,7 @@
 from utils import *
-import argparse, json, pickle
+import argparse, json
 from tqdm import tqdm
+import pandas as pd
 
 def read_args():
     parser = argparse.ArgumentParser(description='Process JSON data.')
@@ -12,43 +13,32 @@ def main():
     args = read_args()
 
     # Example usage:
-    repo_commits = extract_commit_info(args.data_path)
-    github_info = json.load(open(args.github_info, 'r'))
-    found_repos = []
-    try:
-        with open('outputs/found_repos.jsonl', 'r') as f:
-            for line in f:
-                data = json.loads(line)
-                found_repos.append(data)
-    except:
-        found_repos = []
+    if not os.path.exists('outputs/commit_info.csv'):
+        repo_commits = extract_commit_info(args.data_path)
+    else:
+        repo_commits = pd.read_csv('outputs/commit_info.csv')
 
-    not_found_repos = []
-    for index, repo_commit in enumerate(repo_commits):
-        print(f"{index}/{len(repo_commits)} repos:")
-        if repo_commit in found_repos:
+    github_info = json.load(open(args.github_info, 'r'))
+
+    for index, row in repo_commits.iterrows():
+        print(f"{index + 1}/{repo_commits.shape[0]} repos:")
+        if row['found']:
             continue
     
-        repositories = find_repo_by_name(repo_commit['repo'], github_info['user'], github_info['token'])
+        repositories = find_repo_by_name(row['repo'], github_info['user'], github_info['token'])
 
         if repositories:
             for repo in tqdm(repositories):
                 repo_url = repo['html_url']
 
                 # Generate commit link and save to file
-                commit_link = generate_version_link(repo_url, version=repo_commit['version'])
+                commit_link = generate_version_link(repo_url, version=row['version'])
                 if commit_link:
-                    save_to_file(commit_link)
-                    found_repos.append(repo_commit)
-                    json_data = json.dumps(repo_commit)
-                    with open('outputs/found_repos.jsonl', 'a') as f:
-                        f.write(json_data + '\n')
+                    repo_commits.at[index, 'found'] = True
+                    repo_commits.at[index, 'link'] = commit_link
                     break
-            
-            not_found_repos.append(repo_commit)
-            json_data = json.dumps(repo_commit)
-            with open('outputs/not_found_repos.jsonl', 'a') as f:
-                f.write(json_data + '\n')
+
+    repo_commits.to_csv('outputs/commit_info.csv', index=False)
 
 if __name__ == "__main__":
     main()
