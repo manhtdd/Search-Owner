@@ -49,8 +49,14 @@ def save_to_file(commit_link):
     with open('outputs/commits.txt', 'a') as file:
         file.write(f"{commit_link}\n")
 
+import glob
+import re
+import json
+
 def extract_commit_info(pattern):
     commit_info_list = []
+    seen_commits = set()
+    seen_repos = set()
 
     # Find all files matching the pattern
     file_paths = glob.glob(pattern)
@@ -63,16 +69,25 @@ def extract_commit_info(pattern):
             language = match.group(1)
             repo = match.group(2)
 
+            # Ensure repo is unique
+            if repo not in seen_repos:
+                seen_repos.add(repo)
+
             try:
                 # Load commit_info.json file
                 commit_info = json.load(open(path, 'r'))
                 commit_hash = commit_info['hash']
 
-                # Extract additional information from commit_info.json
-                commit_info_list.append({'repo': repo, 'commit_hash': commit_hash})
+                # Ensure commit is unique
+                if commit_hash not in seen_commits:
+                    # Extract additional information from commit_info.json
+                    commit_info_list.append({'repo': repo, 'commit_hash': commit_hash})
+                    seen_commits.add(commit_hash)
             except Exception as e:
                 logger(f"Error loading or processing file {path}: {e}")
         else:
             logger("Pattern does not match expected format.")
 
+    print(len(seen_repos))
+    print(len(commit_info_list))
     return commit_info_list

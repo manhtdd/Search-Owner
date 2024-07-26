@@ -13,6 +13,7 @@ def main():
 
     # Example usage:
     repo_commits = extract_commit_info(args.data_path)
+    exit()
     github_info = json.load(open(args.github_info, 'r'))
     found_repos = []
     try:
